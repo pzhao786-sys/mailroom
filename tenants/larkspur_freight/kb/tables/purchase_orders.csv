@@ -1,0 +1,10 @@
+po_number,vendor_name,vendor_domain,description,amount,status
+PO-40211,Buckeye Fleet Services,buckeyefleet.example,"Q4 preventive maintenance, 6 tractors",4860.00,open
+PO-40235,TirePoint Commercial,tirepoint.example,12 drive tires with disposal,3212.40,open
+PO-40188,Midstate Uniform & Linen,midstate-uniform.example,November uniform and linen service,1150.00,open
+PO-40250,Clearwater IT Services,clearwater-it.example,Network switch installation (fixed bid),2400.00,open
+PO-40262,Lakeview Dock Equipment,lakeview-dock.example,"Dock leveler repair, doors 4-6",8376.40,open
+PO-40199,Great Lakes Trailer Leasing,gltrailer.example,"Q4 trailer lease, 25 units",31250.00,open
+PO-40271,Ridgeline Safety Supply,ridgeline-safety.example,High-visibility vests and gloves,1890.00,closed
+PO-40277,Frostline Snow Services,frostline-snow.example,"Snow removal, November-December",1350.00,open
+PO-40280,Hilltop Signs & Graphics,hilltop-signs.example,Trailer decals (20 units),2275.00,open

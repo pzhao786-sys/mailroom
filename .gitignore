@@ -1,0 +1,21 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# runtime data (per-tenant outboxes, sheets, ledgers)
+var/
+
+# eval reports are generated; keep the committed baseline only
+evals/reports/*
+!evals/reports/.gitkeep
+!evals/reports/baseline-*.md
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+build/
+dist/

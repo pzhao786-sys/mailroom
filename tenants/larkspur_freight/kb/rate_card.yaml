@@ -1,0 +1,31 @@
+# Larkspur Freight LTL rate card (fictional). Used by the calculate_freight_quote tool.
+currency: USD
+regions:
+  MW: [OH, IN, MI, IL, WI, MN, IA, MO, KY]
+  NE: [PA, NY, NJ, CT, MA, RI, VT, NH, ME, MD, DE, DC]
+  SE: [WV, VA, NC, SC, GA, FL, TN, AL, MS]
+  SC: [TX, OK, AR, LA, KS, NE]
+# USD per lb before weight breaks; origin region -> destination region
+lane_rate_per_lb:
+  MW: { MW: 0.21, NE: 0.27, SE: 0.29, SC: 0.33 }
+  NE: { MW: 0.27, NE: 0.22, SE: 0.30, SC: 0.37 }
+  SE: { MW: 0.29, NE: 0.30, SE: 0.23, SC: 0.31 }
+  SC: { MW: 0.33, NE: 0.37, SE: 0.31, SC: 0.24 }
+weight_breaks:
+  - { min_lbs: 0, multiplier: 1.00 }
+  - { min_lbs: 1000, multiplier: 0.85 }
+  - { min_lbs: 2000, multiplier: 0.74 }
+  - { min_lbs: 5000, multiplier: 0.63 }
+  - { min_lbs: 10000, multiplier: 0.55 }
+minimum_charge: 165.00
+fuel_surcharge_pct: 22.5
+services:
+  standard: { multiplier: 1.00, transit_days: "2-5 business days" }
+  expedited: { multiplier: 1.40, transit_days: "1-2 business days" }
+accessorials:
+  liftgate: 85.00
+  residential: 110.00
+  inside_delivery: 140.00
+  appointment: 45.00
+max_weight_lbs: 15000
+quote_valid_days: 14

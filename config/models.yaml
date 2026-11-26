@@ -1,0 +1,68 @@
+# Model catalog. Tenants refer to the aliases under `models`, so swapping a model is a one-line change.
+# Prices are USD per 1M tokens. Check the provider's pricing page before quoting cost numbers;
+# a null price means cost is reported as unknown.
+
+providers:
+  deepseek:
+    kind: openai_compat
+    base_url: https://api.deepseek.com
+    api_key_env: DEEPSEEK_API_KEY
+  openai:
+    kind: openai_compat
+    base_url: https://api.openai.com/v1
+    api_key_env: OPENAI_API_KEY
+  anthropic:
+    kind: anthropic
+    base_url: https://api.anthropic.com
+    api_key_env: ANTHROPIC_API_KEY
+  ollama:
+    kind: openai_compat
+    base_url: http://localhost:11434/v1
+    api_key_env: null
+  # The author's own Java gateway (../llm-gateway): failover, rate limits, cache, usage ledger.
+  llm_gateway:
+    kind: openai_compat
+    base_url: http://localhost:8080/v1
+    api_key_env: LLM_GATEWAY_KEY
+
+models:
+  deepseek-flash:
+    provider: deepseek
+    model: deepseek-flash
+    structured_output: json        # json_object mode + schema in the prompt
+    # DeepSeek reasons by default and bills it as output tokens; the demo does not need it.
+    extra_body: { thinking: { type: disabled } }
+    # Peak list price read 2026-11-16 (api-docs.deepseek.com/quick_start/pricing); off-peak is lower,
+    # so reported cost is an upper bound.
+    pricing: { input: 0.30, cached_input: 0.03, output: 1.20 }
+
+  deepseek-via-gateway:
+    provider: llm_gateway
+    model: deepseek-flash
+    structured_output: json
+    extra_body: { thinking: { type: disabled } }
+    pricing: { input: 0.30, cached_input: 0.03, output: 1.20 }
+
+  gpt-4o-mini:
+    provider: openai
+    model: gpt-4o-mini
+    structured_output: json
+    pricing: { input: 0.15, cached_input: 0.075, output: 0.60 }
+
+  claude-haiku:
+    provider: anthropic
+    model: claude-haiku-5-5
+    structured_output: tool        # no JSON mode: force a single tool call instead
+    pricing: null                  # fill in from the Anthropic pricing page before comparing cost
+
+  claude-sonnet:
+    provider: anthropic
+    model: claude-sonnet-5-5
+    structured_output: tool
+    pricing: null
+
+  qwen-local:
+    provider: ollama
+    model: qwen2.5:7b-instruct
+    structured_output: json
+    pricing: { input: 0, cached_input: 0, output: 0 }

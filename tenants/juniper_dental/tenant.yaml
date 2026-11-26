@@ -1,0 +1,144 @@
+# Juniper Dental Studio — a fictional family dental practice. Everything below is demo data.
+# Same code as larkspur_freight; different categories, tools, rules and a stricter privacy posture.
+tenant: juniper_dental
+display_name: Juniper Dental Studio
+locale: en-US
+secrets_prefix: JUNIPER_
+
+company:
+  name: Juniper Dental Studio
+  description: a two-dentist family dental practice in Madison, Wisconsin
+  mailbox: frontdesk@juniperdental.example
+  timezone: America/Chicago
+  signature: |
+    Warm regards,
+    Juniper Dental Studio | Front Desk
+    (608) 555-0186 | frontdesk@juniperdental.example
+  reply_style: warm, reassuring and concise, plain language without dental jargon
+
+models:
+  triage: deepseek-flash
+  handle: deepseek-flash
+
+tools:
+  find_open_slots: { slots_file: kb/tables/open_slots.csv }
+  hold_appointment_slot: { slots_file: kb/tables/open_slots.csv }
+
+knowledge:
+  docs_dir: kb/docs
+  tables:
+    appointments:
+      file: kb/tables/appointments.csv
+      keys: [patient_name, date]
+      tool_name: lookup_my_appointments
+      description: >-
+        Look up the sender's own upcoming appointments by patient name (and optionally date, YYYY-MM-DD).
+        Only appointments booked under the sender's email address are visible.
+      owner_column: patient_email
+      owner_match: email
+
+categories:
+  appointment_request:
+    description: A patient or parent wants to book, reschedule or cancel a dental appointment.
+    instructions: |
+      - For new bookings and reschedules, call find_open_slots with the right appointment type and the patient's preferred dates and time of day. Offer up to three slots exactly as returned (day, date, time, provider).
+      - If the patient asks for one specific time and find_open_slots returns that exact slot, call hold_appointment_slot for it and say the time is held pending front-desk confirmation.
+      - For reschedules and cancellations, check the existing appointment with lookup_my_appointments first.
+      - Mention the 24-hour cancellation policy for cancellations and reschedules, and the new-patient forms for new patients (search_knowledge_base).
+      - appointment_type: cleaning (includes the routine exam), exam, filling, crown, whitening, consult, emergency, other.
+    fields:
+      request_type: { type: enum, values: [new, reschedule, cancel], required: true }
+      patient_name: { type: str, required: true }
+      appointment_type: { type: enum, values: [cleaning, exam, filling, crown, whitening, consult, emergency, other] }
+      new_patient: { type: bool }
+      preferred_time: { type: enum, values: [morning, afternoon, any] }
+      patient_age: { type: int, ge: 0, le: 120 }
+      insurance_provider: { type: str }
+    tools: [find_open_slots, hold_appointment_slot, lookup_my_appointments, search_knowledge_base]
+    record:
+      tab: Appointment Requests
+      columns: [received_at, sender, patient_name, request_type, appointment_type, new_patient, preferred_time]
+    on_missing_required: request_info
+    minutes_saved: 6
+
+  billing_insurance:
+    description: Questions about which insurance is accepted, coverage, bills and balances, payment plans or payment methods.
+    instructions: |
+      - Answer only from the knowledge base (insurance networks, payment plans, payment methods, self-pay prices).
+      - Never estimate what a specific plan will pay; offer a free benefits check by the front desk instead.
+      - question_type statement_error means the patient believes a bill or balance is wrong.
+    fields:
+      patient_name: { type: str }
+      question_type: { type: enum, values: [insurance_accepted, coverage, balance, statement_error, payment_plan, payment_method], required: true }
+      insurance_provider: { type: str }
+      amount: { type: money }
+    tools: [search_knowledge_base]
+    record:
+      tab: Billing Questions
+      columns: [received_at, sender, patient_name, question_type, insurance_provider, amount]
+    minutes_saved: 8
+
+  complaint:
+    description: A patient is unhappy - wait times, billing, staff, the facility, or how a treatment turned out.
+    instructions: |
+      - severity: high = threatens legal action or public reviews, or reports pain or a health problem after treatment; medium = billing or staff issues; low = a minor inconvenience.
+      - Apologize sincerely, do not discuss clinical details, and say the office manager will follow up personally.
+    fields:
+      issue_type: { type: enum, values: [wait_time, billing, staff_conduct, treatment_outcome, facility, other], required: true }
+      severity: { type: enum, values: [low, medium, high], required: true }
+    tools: [search_knowledge_base]
+    record:
+      tab: Patient Feedback
+      columns: [received_at, sender, issue_type, severity, summary]
+    minutes_saved: 10
+
+  spam:
+    description: Unsolicited marketing, vendor promotions, review or SEO services, newsletters and junk.
+    skip_handle: true
+    archive: true
+    reply: none
+    minutes_saved: 1
+
+  other:
+    description: Anything else - clinical or medical questions, records requests, job applications, vendor or business mail.
+    skip_handle: true
+    always_handoff: true
+    reply: none
+
+policy:
+  handoff_threshold: 1.0
+  low_confidence_below: 0.7
+  force_handoff_if:
+    - name: dental_emergency
+      categories: [appointment_request, billing_insurance, complaint]
+      expr: triage.urgency == "high" or fields.appointment_type == "emergency"
+      message: Possible dental emergencies (pain, swelling, bleeding, a broken tooth) are triaged by clinical staff right away.
+    - name: clinical_or_severe_complaint
+      categories: [complaint]
+      expr: fields.issue_type == "treatment_outcome" or fields.severity == "high"
+      message: Complaints about treatment results, or with high severity, go to the office manager and the dentist.
+    - name: statement_dispute
+      categories: [billing_insurance]
+      expr: fields.question_type == "statement_error"
+      message: Disputed bills are reviewed by the billing coordinator.
+  approvals:
+    record_row: auto
+    send_reply: approval
+    notify_team: auto
+    tool_call: approval
+  max_steps: 8
+  max_cost_usd_per_email: 0.03
+
+privacy:
+  redact_in_logs: [email, phone, ssn, card, bank_account, member_id, date_of_birth]
+  # Patient identifiers never reach the model provider.
+  redact_model_input: [ssn, card, member_id]
+  custom_patterns:
+    member_id: "(?i)\\b(?:member|subscriber|policy)\\s*(?:id|#|no\\.?|number)?\\s*(?:is|:|#)?\\s*[A-Z]{2,4}\\d{6,12}\\b"
+    date_of_birth: "(?i)\\b(?:dob|date of birth|born)\\s*[:\\-]?\\s*\\d{1,2}/\\d{1,2}/\\d{2,4}\\b"
+
+connectors:
+  inbox: fixture
+  records: local_csv
+  outbox: local
+  notify: log

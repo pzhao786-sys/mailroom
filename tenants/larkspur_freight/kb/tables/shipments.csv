@@ -1,0 +1,13 @@
+tracking_number,po_number,customer_company,customer_domain,origin,destination,pieces,weight_lbs,status,last_scan_location,last_scan_time,eta,delivered_at,signed_by,exception_note
+LF20261187,55120,Brightwater Supply Co.,brightwater-supply.example,"Columbus, OH","Indianapolis, IN",3,1800,in_transit,"Dayton, OH terminal",2026-11-18 21:40,2026-11-20,,,
+LF20261203,55133,Brightwater Supply Co.,brightwater-supply.example,"Columbus, OH","Philadelphia, PA",2,950,out_for_delivery,"Philadelphia, PA terminal",2026-11-20 06:45,2026-11-20,,,
+LF20261192,77812,Oakridge Tool & Die,oakridge-tools.example,"Dayton, OH","Atlanta, GA",6,4200,in_transit,"Knoxville, TN terminal",2026-11-19 05:15,2026-11-21,,,
+LF20261145,77790,Oakridge Tool & Die,oakridge-tools.example,"Dayton, OH","Nashville, TN",2,1300,delivered,"Nashville, TN",2026-11-14 11:20,2026-11-14,2026-11-14 11:20,J. Alvarez,
+LF20261150,31877,Meridian Medical Supply,meridian-medical.example,"Cincinnati, OH","Charlotte, NC",4,2100,delivered,"Charlotte, NC",2026-11-16 14:02,2026-11-16,2026-11-16 14:02,R. Patel,damage noted on delivery receipt: 1 pallet crushed
+LF20261166,90411,Fernway Garden Center,fernway-garden.example,"Toledo, OH","Pittsburgh, PA",4,2400,delivered,"Pittsburgh, PA",2026-11-17 10:30,2026-11-17,2026-11-17 10:30,T. Brooks,delivered 3 of 4 pallets (shortage noted)
+LF20261171,66019,Hamlin Foods,hamlin-foods.example,"Chicago, IL","Charlotte, NC",5,2600,delayed,"Louisville, KY terminal",2026-11-19 08:00,2026-11-21,,,"weather delay (ice on I-65), ETA moved from 2026-11-19"
+LF20261180,66031,Hamlin Foods,hamlin-foods.example,"Chicago, IL","Atlanta, GA",3,1500,in_transit,"Chattanooga, TN terminal",2026-11-19 23:10,2026-11-20,,,
+LF20261199,40055,Prairie Paper Goods,prairie-paper.example,"Detroit, MI","Philadelphia, PA",8,3900,exception,"Harrisburg, PA terminal",2026-11-19 16:10,,,,"freight damaged in transit, held at terminal for inspection"
+LF20261208,12007,Keystone Cabinetry,keystone-cabinets.example,"Harrisburg, PA","Dallas, TX",10,6500,in_transit,"Memphis, TN terminal",2026-11-19 22:30,2026-11-23,,,
+LF20261211,12010,Keystone Cabinetry,keystone-cabinets.example,"Harrisburg, PA","Houston, TX",7,4800,picked_up,"Harrisburg, PA terminal",2026-11-19 17:00,2026-11-24,,,
+LF20261176,88213,Blueline Auto Parts,blueline-auto.example,"Detroit, MI","Columbus, OH",5,2750,delivered,"Columbus, OH",2026-11-18 09:05,2026-11-18,2026-11-18 09:05,M. Chen,

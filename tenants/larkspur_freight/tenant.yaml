@@ -1,0 +1,200 @@
+# Larkspur Freight Co. — a fictional regional LTL carrier. Everything below is demo data.
+tenant: larkspur_freight
+display_name: Larkspur Freight Co.
+locale: en-US
+secrets_prefix: LARKSPUR_
+
+company:
+  name: Larkspur Freight Co.
+  description: a regional less-than-truckload (LTL) freight carrier in Columbus, Ohio, serving the Midwest, Northeast, Southeast and South Central US
+  mailbox: ops@larkspurfreight.example
+  timezone: America/New_York
+  signature: |
+    Best regards,
+    Larkspur Freight Co. | Customer Operations
+    ops@larkspurfreight.example | (614) 555-0142
+  reply_style: friendly, concise and professional, short paragraphs, US English
+
+models:
+  triage: deepseek-flash
+  handle: deepseek-flash
+
+tools:
+  calculate_freight_quote: { rate_card: kb/rate_card.yaml }
+  open_damage_claim: {}
+
+knowledge:
+  docs_dir: kb/docs
+  tables:
+    shipments:
+      file: kb/tables/shipments.csv
+      keys: [tracking_number, po_number]
+      description: >-
+        Look up a shipment by tracking number (LF followed by 8 digits) or by the customer's PO number.
+        Returns status, last scan, ETA and delivery details. Only shipments of the sender's company are visible.
+      owner_column: customer_domain
+      owner_match: domain
+    purchase_orders:
+      file: kb/tables/purchase_orders.csv
+      keys: [po_number]
+      tool_name: lookup_purchase_order
+      description: Look up one of Larkspur's own purchase orders (PO- plus 5 digits) to check a vendor invoice against it.
+
+categories:
+  quote_request:
+    description: A shipper asks what it would cost to move freight (rate request, quote, "how much to ship").
+    instructions: |
+      - Convert kilograms to pounds (kg x 2.20462) and round to the nearest pound.
+      - Infer the two-letter state code from a well-known city name (Dallas -> TX, Cincy -> OH).
+      - When origin state, destination state and weight are all known, call calculate_freight_quote, then put its total in quote_total and its quote_id in quote_id.
+      - In the reply give the tool's total_formatted, transit_days and valid_until, and say the price includes the fuel surcharge.
+      - Requested liftgate, residential delivery, inside delivery or delivery appointment -> pass as accessorials (liftgate, residential, inside_delivery, appointment).
+      - If the weight or either location is missing, do not call the tool; ask for exactly what is missing.
+      - If the email quotes an earlier message, use the shipment details from it when the sender refers to them.
+    fields:
+      customer_company: { type: str }
+      origin_city: { type: str }
+      origin_state: { type: str, required: true, pattern: "^[A-Z]{2}$", description: two-letter state code }
+      destination_city: { type: str }
+      destination_state: { type: str, required: true, pattern: "^[A-Z]{2}$", description: two-letter state code }
+      weight_lbs: { type: float, required: true, gt: 0, description: total weight in pounds }
+      pallets: { type: int, ge: 0 }
+      service: { type: enum, values: [standard, expedited] }
+      accessorials: { type: list, description: "liftgate, residential, inside_delivery, appointment" }
+      hazmat: { type: bool, description: true only if the sender says the freight is hazardous or dangerous goods }
+      ship_date: { type: date }
+      quote_total: { type: money, description: total returned by calculate_freight_quote }
+      quote_id: { type: str }
+    tools: [calculate_freight_quote, search_knowledge_base]
+    record:
+      tab: Quote Requests
+      columns: [received_at, sender, customer_company, origin_state, destination_state, weight_lbs, service, quote_total, quote_id]
+    on_missing_required: request_info
+    validations:
+      - name: quote_priced
+        expr: fields.quote_total is not None and fields.quote_total > 0
+        message: no price from the rate card
+    minutes_saved: 9
+
+  shipment_status:
+    description: A customer asks where a shipment is, when it will arrive, or for proof of delivery.
+    instructions: |
+      - Look up every tracking number or PO number mentioned with lookup_shipments.
+      - Report status, last scan location and ETA exactly as returned. If delivered, give the delivery date and who signed.
+      - If nothing is found, ask the customer to double-check the number. Do not guess.
+      - If the record has an exception but gives an ETA, apologize briefly and give that ETA. If it has an exception and no ETA, set needs_human.
+    fields:
+      reference: { type: str, required: true, description: the tracking number or PO number the customer gave }
+      found: { type: bool, description: whether the lookup found the shipment }
+      status: { type: str, description: status as returned by the lookup }
+      eta: { type: date }
+    tools: [lookup_shipments, search_knowledge_base]
+    record:
+      tab: Status Inquiries
+      columns: [received_at, sender, reference, found, status, eta]
+    on_missing_required: request_info
+    minutes_saved: 5
+
+  invoice:
+    description: A vendor or supplier sends Larkspur a bill to pay (invoice, statement, payment request), usually as a PDF.
+    instructions: |
+      - Read the invoice from the attachment text, or from the email body if there is no attachment. Copy numbers exactly. Dates as YYYY-MM-DD.
+      - If a PO number appears, check it with lookup_purchase_order. Set po_match true only when the PO exists, is open, the vendor matches and the PO amount is within 2% of the invoice total; otherwise false. Leave po_match null when there is no PO.
+      - Set bank_details_changed true if the email or the invoice mentions new, updated or changed bank, remittance or payment account details.
+      - Reply with a short acknowledgment that the invoice was received and is being processed under standard terms. Do not promise a payment date.
+    fields:
+      vendor_name: { type: str, required: true }
+      invoice_number: { type: str, required: true }
+      invoice_date: { type: date, required: true }
+      due_date: { type: date }
+      po_number: { type: str }
+      subtotal: { type: money }
+      tax: { type: money }
+      total: { type: money, required: true, ge: 0 }
+      po_match: { type: bool }
+      bank_details_changed: { type: bool }
+    tools: [lookup_purchase_order, search_knowledge_base]
+    document_expected: true
+    record:
+      tab: Accounts Payable
+      columns: [received_at, sender, vendor_name, invoice_number, invoice_date, due_date, po_number, total]
+    validations:
+      - name: totals_add_up
+        expr: fields.subtotal is None or fields.tax is None or abs(fields.subtotal + fields.tax - fields.total) <= 0.02
+        message: subtotal plus tax does not equal the total
+      - name: po_matches
+        expr: fields.po_number is None or fields.po_match
+        message: PO not found, closed, or amount/vendor mismatch
+      - name: due_after_invoice
+        expr: fields.due_date is None or fields.invoice_date is None or fields.due_date >= fields.invoice_date
+        message: due date is before the invoice date
+    minutes_saved: 7
+
+  complaint:
+    description: A customer is unhappy - damaged, lost, short or late freight, billing disputes, driver or service problems.
+    instructions: |
+      - severity: high = legal threat, injury, total loss, claimed amount over $2,500, or a threat to move their business; medium = damage, shortage, repeated delays, billing disputes, driver conduct; low = a one-off minor delay or annoyance.
+      - Search the knowledge base for the matching policy (claims, delays, billing) and follow it.
+      - For damage, loss or shortage on a specific tracking number, call open_damage_claim once. It is queued for staff approval: say the claim is being opened and list the documents the claims policy asks for.
+      - Acknowledge the problem sincerely. Do not admit liability or promise compensation.
+    fields:
+      issue_type: { type: enum, values: [damage, loss, shortage, delay, billing, driver_conduct, other], required: true }
+      severity: { type: enum, values: [low, medium, high], required: true }
+      tracking_number: { type: str }
+      claimed_amount: { type: money }
+      customer_company: { type: str }
+    tools: [search_knowledge_base, lookup_shipments, open_damage_claim]
+    record:
+      tab: Complaints
+      columns: [received_at, sender, customer_company, issue_type, severity, tracking_number, claimed_amount, summary]
+    minutes_saved: 12
+
+  spam:
+    description: Unsolicited marketing, newsletters, webinar invites, cold sales or SEO pitches, and junk or phishing.
+    skip_handle: true
+    archive: true
+    reply: none
+    minutes_saved: 1
+
+  other:
+    description: Genuine mail that fits no other category - job applications, media or partnership requests, account administration, general questions.
+    skip_handle: true
+    always_handoff: true
+    reply: none
+
+policy:
+  handoff_threshold: 1.0
+  low_confidence_below: 0.7
+  force_handoff_if:
+    - name: hazmat
+      categories: [quote_request]
+      expr: fields.hazmat
+      message: Hazardous-materials shipments are quoted by a person.
+    - name: large_invoice
+      categories: [invoice]
+      expr: fields.total > 25000
+      message: Invoices over $25,000 need controller approval.
+    - name: bank_change
+      categories: [invoice]
+      expr: fields.bank_details_changed
+      message: Any change of bank or remittance details must be verified by phone by a person.
+    - name: high_severity
+      categories: [complaint]
+      expr: fields.severity == "high"
+      message: High-severity complaints (legal threats, injuries, total loss, claims over $2,500, threats to leave) go to a manager.
+  approvals:
+    record_row: auto
+    send_reply: approval
+    notify_team: auto
+    tool_call: approval
+  max_steps: 8
+  max_cost_usd_per_email: 0.03
+
+privacy:
+  redact_in_logs: [email, phone, ssn, card, bank_account]
+
+connectors:
+  inbox: fixture
+  records: local_csv
+  outbox: local
+  notify: log
