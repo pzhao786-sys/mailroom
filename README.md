@@ -28,7 +28,7 @@ All companies, people and data are synthetic. Email addresses use the reserved `
 - **Business rules in YAML**, such as `fields.total > 25000`, run by a whitelist interpreter
   ([`expr.py`](src/mailroom/expr.py)), never `eval`.
 - **Model-agnostic**: OpenAI-compatible and Anthropic adapters over raw HTTP, with one retry policy.
-  DeepSeek, OpenAI, Claude, Ollama, or the author's own [llm-gateway](../llm-gateway) are all one
+  DeepSeek, OpenAI, Claude, Ollama, or the author's own [llm-gateway](https://github.com/pzhao786-sys/llm-gateway) are all one
   alias away.
 - **Untrusted input handled as such**: email wrapped as data, recipients bound by the host,
   owner-scoped lookups (you only see your own shipments), approval for side effects, plus

@@ -149,7 +149,7 @@ add a plugin; the core (loop, pipeline, policy, eval) does not change.
 
 ### D9. Model adapters over raw HTTP
 Two adapters cover the field: **OpenAI-compatible** (OpenAI, DeepSeek, Qwen, vLLM, Ollama,
-OpenRouter, and the author's own [llm-gateway](../llm-gateway)) and **Anthropic Messages**. Both are
+OpenRouter, and the author's own [llm-gateway](https://github.com/pzhao786-sys/llm-gateway)) and **Anthropic Messages**. Both are
 written directly against HTTP with one retry policy (exponential backoff with jitter, honours
 `Retry-After`). Differences the adapters hide:
 
